@@ -35,9 +35,9 @@ class ProjectMember(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members')
 
     class Role(models.TextChoices):
-        VIEWER = 'Viewer'
-        DEVELOPER = 'Developer'
-        ADMIN = 'Admin'
+        VIEWER = 'Viewer', 'Viewer'
+        DEVELOPER = 'Developer', 'Developer'
+        ADMIN = 'Admin', 'Admin'
 
     role = models.CharField(choices=Role.choices,
                               default=Role.DEVELOPER,

@@ -9,9 +9,9 @@ class Sprint(models.Model):
     close_date = models.DateTimeField(null=True)
 
     class SprintStatus(models.TextChoices):
-        CREATED = 'Created'
-        STARTED = 'Started'
-        CLOSED = 'Closed'
+        CREATED = 'Created', 'Created'
+        STARTED = 'Started', 'Started'
+        CLOSED = 'Closed',  'Closed'
 
     status = models.CharField(choices=SprintStatus.choices,
                               default=SprintStatus.CREATED,
