@@ -1,4 +1,5 @@
 from django.db import models, transaction
+from django.utils import timezone
 
 class Task(models.Model):
     id = models.CharField(max_length=64, primary_key=True)
@@ -81,6 +82,31 @@ class Task(models.Model):
                 **kwargs
             )
 
+    def add_parent(self):
+        pass
+
+    def remove_parent(self):
+        pass
+
+    def change_status(self):
+        pass
+
+    def save(
+        self,
+        *args,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        self.last_edit_time = timezone.now()
+        super().save(*args,
+                     force_insert=force_insert,
+                     force_update=force_update,
+                     using=using,
+                     update_fields=update_fields
+                     )
+
     def __str__(self):
         return f"{self.id} - {self.summary}"
 
@@ -98,6 +124,22 @@ class Comment(models.Model):
     content = models.CharField(max_length=255)
     creation_date = models.DateTimeField(auto_now_add=True)
     last_edit_time = models.DateTimeField(auto_now=True)
+
+    def save(
+        self,
+        *args,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
+        self.last_edit_time = timezone.now()
+        super().save(*args,
+                     force_insert=force_insert,
+                     force_update=force_update,
+                     using=using,
+                     update_fields=update_fields
+                     )
 
     def __str__(self):
         return f"Comment by {self.author} on {self.creation_date}"
