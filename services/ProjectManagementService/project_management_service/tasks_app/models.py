@@ -47,6 +47,9 @@ class Task(models.Model):
 
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TO_DO)
 
+    class ProjectRequiredException(Exception):
+        pass
+
     def get_type(self) -> TaskType:
         return self.TaskType(self.type)
 
@@ -69,6 +72,8 @@ class Task(models.Model):
 
     @classmethod
     def create_for_project(cls, project, **kwargs):
+        if project is None:
+            raise cls.ProjectRequiredException()
         with transaction.atomic():
             project_locked = project.__class__.objects.select_for_update().get(pk=project.pk)
             project_locked.last_task_index = (project_locked.last_task_index or 0) + 1
