@@ -71,9 +71,9 @@ class Task(models.Model):
     def create_for_project(cls, project, **kwargs):
         with transaction.atomic():
             project_locked = project.__class__.objects.select_for_update().get(pk=project.pk)
-            project_locked.last_task_number = (project_locked.last_task_number or 0) + 1
-            project_locked.save(update_fields=['last_task_number'])
-            new_number = project_locked.last_task_number
+            project_locked.last_task_index = (project_locked.last_task_index or 0) + 1
+            project_locked.save(update_fields=['last_task_index'])
+            new_number = project_locked.last_task_index
             task_id = f"{str(project_locked.id)}-{new_number}"
             return cls.objects.create(
                 id=task_id,
