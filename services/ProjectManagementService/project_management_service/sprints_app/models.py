@@ -30,14 +30,15 @@ class Sprint(models.Model):
             self.close_date = None
             self.save()
             return
-        raise self.InvalidSprintStatusTransition()
+        raise self.InvalidSprintStatusTransition(f'Sprint ID: {self.id} - Cannot start sprint when it has status: "{self.status}"')
 
     def close_sprint(self):
         if self.status == self.SprintStatus.STARTED:
             self.close_date = timezone.now()
             self.save()
             return
-        raise self.InvalidSprintStatusTransition()
+        raise self.InvalidSprintStatusTransition(f'Sprint ID: {self.id} - Cannot close sprint when it has status: "{self.status}"')
+
 
 
     # tasks - Task model. Many-to-Many.

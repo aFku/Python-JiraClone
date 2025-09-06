@@ -1,6 +1,9 @@
 from django.db import models, transaction
 from django.utils import timezone
 
+from .services.task_status_workflow import TaskStatusWorkFlow, IncorrectTaskTransition, Status
+from .services.task_relationship import TaskType, IncorrectTaskRelationship, TaskRelationship
+
 class Task(models.Model):
     id = models.CharField(max_length=64, primary_key=True)
     number = models.IntegerField(null=False)
@@ -22,12 +25,6 @@ class Task(models.Model):
 
     estimate = models.IntegerField(null=True, blank=True)
 
-    class TaskType(models.TextChoices):
-        TASK = 'Task', 'Task'
-        EPIC = 'Epic', 'Epic'
-        INITIATIVE = 'Initiative', 'Initiative'
-        BUG = 'Bug', 'Bug'
-        SUPPORT = 'Support', 'Support'
 
     type = models.CharField(max_length=20, choices=TaskType.choices, default=TaskType.TASK)
 
@@ -39,25 +36,19 @@ class Task(models.Model):
 
     priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
 
-    class Status(models.TextChoices):
-        TO_DO = 'To Do', 'To Do'
-        IN_PROGRESS = 'In Progress', 'In Progress'
-        IN_REVIEW = 'In Review', 'In Review'
-        CLOSED = 'Closed', 'Closed'
-
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TO_DO)
 
     class ProjectRequiredException(Exception):
         pass
 
     def get_type(self) -> TaskType:
-        return self.TaskType(self.type)
+        return TaskType(self.type)
 
     def get_priority(self) -> Priority:
         return self.Priority(self.priority)
 
     def get_status(self) -> Status:
-        return self.Status(self.status)
+        return Status(self.status)
 
     # Observers
     def add_observer(self, user_id: str):
@@ -87,14 +78,28 @@ class Task(models.Model):
                 **kwargs
             )
 
-    def add_parent(self):
-        pass
+    def add_parent(self, parent: "Task"):
+        if self.parent is not None:
+            self.remove_parent()
+
+        if not TaskRelationship.can_be_related(parent.get_type(), self.get_type()):
+            raise IncorrectTaskRelationship(f'Task ID: {self.id} (type: {self.get_type()}) - Cannot add parent with id "{parent.id}" (type: "{parent.get_type()}")')
+
+        self.parent = parent
+        self.save()
 
     def remove_parent(self):
-        pass
+        if self.parent is not None:
+            self.parent = None
+            self.save()
 
-    def change_status(self):
-        pass
+    def change_status(self, to_status: Status):
+        if not TaskStatusWorkFlow.can_transition(self.get_status(), to_status):
+            raise IncorrectTaskTransition(f'Task ID: {self.id} - Cannot change status from "{self.status}" to "{to_status}"')
+
+
+        self.status = to_status
+        self.save()
 
     def save(
         self,
@@ -124,7 +129,7 @@ class TaskObserver(models.Model):
 
 class Comment(models.Model):
     id = models.AutoField(primary_key=True)
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments', null=False)
     author = models.CharField(max_length=64)
     content = models.CharField(max_length=255)
     creation_date = models.DateTimeField(auto_now_add=True)
