@@ -24,18 +24,24 @@ class Sprint(models.Model):
     class InvalidSprintStatusTransition(Exception):
         pass
 
-    def start_sprint(self):
+    def change_status(self, to_status: SprintStatus):
+        if to_status == self.SprintStatus.STARTED:
+            self.__start_sprint()
+        elif to_status == self.SprintStatus.CLOSED:
+            self.__close_sprint()
+        else:
+            raise self.InvalidSprintStatusTransition(f'Sprint ID: {self.id} - Cannot move sprint to status: "{to_status}"')
+
+    def __start_sprint(self):
         if self.status == self.SprintStatus.CREATED:
             self.start_date = timezone.now()
             self.close_date = None
-            self.save()
             return
         raise self.InvalidSprintStatusTransition(f'Sprint ID: {self.id} - Cannot start sprint when it has status: "{self.status}"')
 
-    def close_sprint(self):
+    def __close_sprint(self):
         if self.status == self.SprintStatus.STARTED:
             self.close_date = timezone.now()
-            self.save()
             return
         raise self.InvalidSprintStatusTransition(f'Sprint ID: {self.id} - Cannot close sprint when it has status: "{self.status}"')
 
