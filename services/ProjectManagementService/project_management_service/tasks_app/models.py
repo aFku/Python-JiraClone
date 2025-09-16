@@ -86,12 +86,10 @@ class Task(models.Model):
             raise IncorrectTaskRelationship(f'Task ID: {self.id} (type: {self.get_type()}) - Cannot add parent with id "{parent.id}" (type: "{parent.get_type()}")')
 
         self.parent = parent
-        self.save()
 
     def remove_parent(self):
         if self.parent is not None:
             self.parent = None
-            self.save()
 
     def change_status(self, to_status: Status):
         if not TaskStatusWorkFlow.can_transition(self.get_status(), to_status):
@@ -99,7 +97,6 @@ class Task(models.Model):
 
 
         self.status = to_status
-        self.save()
 
     def save(
         self,
