@@ -6,8 +6,9 @@ from django.http import JsonResponse
 from rest_framework.parsers import JSONParser
 from rest_framework import status
 
-from .models import Task
-from .serializers import TaskSerializer, TaskCreateSerializer, TaskUpdateSerializer
+from .models import Task, Comment
+from .serializers import (TaskSerializer, TaskCreateSerializer, TaskUpdateSerializer, CommentSerializer,
+                          CommentCreateSerializer, CommentUpdateSerializer)
 
 
 @csrf_exempt
@@ -51,4 +52,31 @@ def tasks_by_id_view(request, pk):
         task.delete()
         return JsonResponse({}, status=status.HTTP_204_NO_CONTENT)
 
+
+@csrf_exempt
+@api_view(['GET', 'POST'])
+def comments_by_task(request, pk):
+    try:
+        task = Task.objects.get(id=pk)
+    except Task.DoesNotExist:
+        return JsonResponse({"errors": f'Task {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        comments = Comment.objects.filter(task=task)
+        serializer = CommentSerializer(comments, many=True)
+        return JsonResponse(serializer.data)
+    elif request.method == 'POST':
+        data = JSONParser().parse(request)
+        serializer = CommentCreateSerializer(data=data)
+        if serializer.is_valid():
+            obj = serializer.save()
+            read_serializer = CommentSerializer(obj)
+            return JsonResponse(read_serializer.data)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@csrf_exempt
+@api_view(['GET', 'PATCH', 'DELETE'])
+def comment_by_task_and_id(request, task_pk, comment_pk):
+    pass
 

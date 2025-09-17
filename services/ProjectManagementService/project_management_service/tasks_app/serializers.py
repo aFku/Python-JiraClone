@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Task
+from .models import Task, Comment
 from .services.task_management.task_status_workflow import Status, IncorrectTaskTransition
 from .services.task_management.task_relationship import IncorrectTaskRelationship
 from projects_app.models import Project
@@ -86,4 +86,34 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'task', 'author', 'content', 'creation_date', 'last_edit_time']
+
+
+class CommentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['task', 'author', 'content']
+
+    extra_kwargs = {
+        "author": {"read_only": True}
+    }
+
+    def create(self, validated_data):
+        user_id = self.context.get("user_id")
+        # if request and request.user.is_authenticated:
+        #     validated_data['creator'] = request.user
+        if user_id:
+            validated_data['creator'] = user_id
+
+        return super().create(**validated_data)
+
+
+class CommentUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['content']
 
