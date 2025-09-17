@@ -1,8 +1,8 @@
 from django.db import models, transaction
 from django.utils import timezone
 
-from .services.task_status_workflow import TaskStatusWorkFlow, IncorrectTaskTransition, Status
-from .services.task_relationship import TaskType, IncorrectTaskRelationship, TaskRelationship
+from .services.task_management.task_status_workflow import TaskStatusWorkFlow, IncorrectTaskTransition, Status
+from .services.task_management.task_relationship import TaskType, IncorrectTaskRelationship, TaskRelationship
 
 class Task(models.Model):
     id = models.CharField(max_length=64, primary_key=True)
@@ -12,7 +12,7 @@ class Task(models.Model):
     description = models.CharField(max_length=255, blank=True)
 
     assignee = models.CharField(max_length=64, blank=True, null=True)
-    creator = models.CharField(max_length=64)
+    creator = models.CharField(max_length=64, blank=False)
 
     due_date = models.DateTimeField(null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)

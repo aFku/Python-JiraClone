@@ -3,8 +3,8 @@ import pytest
 from tasks_app.models import Task, TaskObserver, Comment
 from projects_app.models import Project
 from sprints_app.models import Sprint
-from .services.task_status_workflow import IncorrectTaskTransition, Status
-from .services.task_relationship import IncorrectTaskRelationship, TaskType
+from services.ProjectManagementService.project_management_service.tasks_app.services.task_management.task_status_workflow import IncorrectTaskTransition, Status
+from services.ProjectManagementService.project_management_service.tasks_app.services.task_management.task_relationship import IncorrectTaskRelationship, TaskType
 
 import uuid
 from datetime import timedelta

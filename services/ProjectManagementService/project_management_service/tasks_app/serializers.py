@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
 from .models import Task
-from .services.task_status_workflow import Status, IncorrectTaskTransition
-from .services.task_relationship import IncorrectTaskRelationship
-from ..projects_app.models import Project
+from .services.task_management.task_status_workflow import Status, IncorrectTaskTransition
+from .services.task_management.task_relationship import IncorrectTaskRelationship
+from projects_app.models import Project
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,7 +17,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         fields = ['summary', 'description', 'assignee', 'due_date', 'parent', 'sprint', 'project', 'estimate',
                   'type', 'priority', 'creator']
 
-        extr_kwargs = {
+        extra_kwargs = {
             "summary": {"required": True},
             "project": {"required": True},
             "type": {"required": True},
@@ -31,14 +31,24 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             "creator": {"read_only": True}
         }
 
-        def create(self, validated_data):
-            request = self.context.get("request")
-            # if request and request.user.is_authenticated:
-            #     validated_data['creator'] = request.user
-            if request:
-                validated_data['creator'] = "uuu-id4"
+    def create(self, validated_data):
+        error = {
+            "errors": {}
+        }
+        user_id = self.context.get("user_id")
+        # if request and request.user.is_authenticated:
+        #     validated_data['creator'] = request.user
+        if user_id:
+            validated_data['creator'] = user_id
 
-            return super().create(validated_data)
+        project = validated_data.pop('project', None)
+        if not project:
+            error["errors"]['project'] = ["Field 'project is required"]
+
+        if error["errors"]:
+            raise serializers.ValidationError(error)
+
+        return Task.create_for_project(project=project, **validated_data)
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
 
@@ -55,7 +65,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
 
         if status:
             try:
-                instance.change_status(Status[status])
+                instance.change_status(Status(status))
             except IncorrectTaskTransition as e:
                 error["errors"]['status'] = [str(e)]
 
