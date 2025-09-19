@@ -27,9 +27,9 @@ def projects(request):
 
 @csrf_exempt
 @api_view(['GET', 'PATCH', 'DELETE'])
-def project_by_id(request, pk):
+def project_by_id(request, project_pk):
     try:
-        project = Project.objects.get(id=pk)
+        project = Project.objects.get(id=project_pk)
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -54,9 +54,9 @@ def project_by_id(request, pk):
 
 @csrf_exempt
 @api_view(['GET', 'POST', 'DELETE'])
-def project_members(request, pk):
+def project_members(request, project_pk):
     try:
-        project = Project.objects.get(id=pk)
+        project = Project.objects.get(id=project_pk)
     except Project.DoesNotExist:
         JsonResponse({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 

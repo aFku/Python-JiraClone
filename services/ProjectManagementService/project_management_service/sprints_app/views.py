@@ -28,9 +28,9 @@ def sprints_view(request):
 
 @csrf_exempt
 @api_view(['GET', 'PATCH', 'DELETE'])
-def sprint_by_id_view(request, pk):
+def sprint_by_id_view(request, sprint_pk):
     try:
-        sprint = Sprint.objects.get(id=pk)
+        sprint = Sprint.objects.get(id=sprint_pk)
     except Sprint.DoesNotExist:
         return JsonResponse({"error": "Sprint not found"}, status=status.HTTP_404_NOT_FOUND)
 

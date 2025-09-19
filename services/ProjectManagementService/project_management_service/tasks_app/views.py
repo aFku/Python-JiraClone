@@ -32,11 +32,11 @@ def tasks_view(request):
 
 @csrf_exempt
 @api_view(['GET', 'PATCH', 'DELETE'])
-def tasks_by_id_view(request, pk):
+def tasks_by_id_view(request, task_pk):
     try:
-        task = Task.objects.get(id=pk)
+        task = Task.objects.get(id=task_pk)
     except Task.DoesNotExist:
-        return JsonResponse({"errors": f'Task {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"errors": f'Task {task_pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
         serializer = TaskSerializer(task)
@@ -56,11 +56,11 @@ def tasks_by_id_view(request, pk):
 
 @csrf_exempt
 @api_view(['GET', 'POST'])
-def comments_by_task(request, pk):
+def comments_by_task(request, task_pk):
     try:
-        task = Task.objects.get(id=pk)
+        task = Task.objects.get(id=task_pk)
     except Task.DoesNotExist:
-        return JsonResponse({"errors": f'Task {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"errors": f'Task {task_pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
         comments = Comment.objects.filter(task=task)
@@ -78,11 +78,11 @@ def comments_by_task(request, pk):
 
 @csrf_exempt
 @api_view(['GET', 'PATCH', 'DELETE'])
-def comment_by_task_and_id(request, comment_pk):
+def comment_by_id(request, comment_pk):
     try:
         comment = Comment.objects.get(id=comment_pk)
     except Comment.DoesNotExist:
-        return JsonResponse({"errors": f'Comment {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"errors": f'Comment {comment_pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
         serializer = CommentSerializer(comment)
@@ -104,11 +104,11 @@ def comment_by_task_and_id(request, comment_pk):
 
 @csrf_exempt
 @api_view(['GET', 'POST', 'DELETE'])
-def task_observers(request, pk):
+def task_observers(request, task_pk):
     try:
-        task = Task.objects.get(id=pk)
+        task = Task.objects.get(id=task_pk)
     except Task.DoesNotExist:
-        return JsonResponse({"errors": f'Task {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"errors": f'Task {task_pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
         observers = task.observers
