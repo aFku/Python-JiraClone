@@ -98,18 +98,19 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ['task', 'author', 'content']
 
-    extra_kwargs = {
-        "author": {"read_only": True}
-    }
+        extra_kwargs = {
+            "author": {"read_only": True},
+            "task": {"read_only": True}
+        }
 
     def create(self, validated_data):
-        user_id = self.context.get("user_id")
-        # if request and request.user.is_authenticated:
-        #     validated_data['creator'] = request.user
-        if user_id:
-            validated_data['creator'] = user_id
+        internal_data = {
+            "author": self.context.get("user_id"),
+            "task": self.context.get("task")
+        }
+        validated_data.update(internal_data)
 
-        return super().create(**validated_data)
+        return super().create(validated_data)
 
 
 class CommentUpdateSerializer(serializers.ModelSerializer):
@@ -123,11 +124,49 @@ class TaskObserverSerializer(serializers.ModelSerializer):
         model = TaskObserver
         fields = ['task', 'user_id']
 
+        extra_kwargs = {
+            "user_id": {"read_only": True},
+            "task": {"read_only": True}
+        }
 
-class AddObserverSerializer(serializers.Serializer):
-    observers = TaskObserverSerializer(many=True)
+    def create(self, validated_data):
+        internal_data = {
+            "user_id": self.context.get("user_id"),
+            "task": self.context.get("task")
+        }
+        validated_data.update(internal_data)
+        return super().create(internal_data)
 
 
-class TaskObserversResponseSerializer(serializers.Serializer):
-    user_id = serializers.CharField()
-    added = serializers.BooleanField()
+# PoC for Project members - looks more cleaner
+
+
+# class TaskObserverListSerializer(serializers.ListSerializer):
+#     def create(self, validated_data):
+#         internal_data = {
+#             "user_id": self.context.get("user_id"),
+#             "task": self.context.get("task")
+#         }
+#
+#         observers = []
+#         for item in validated_data:
+#             item.update(internal_data)
+#             observers.append(self.child.create(item))
+#         return observers
+#
+#
+# class TaskObserverSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = TaskObserver
+#         fields = ['task', 'user_id']
+#
+#         extra_kwargs = {
+#             "user_id": {"read_only": True},
+#             "task": {"read_only": True}
+#         }
+#
+#         list_serializer_class = TaskObserverListSerializer
+#
+# class TaskObserversResponseSerializer(serializers.Serializer):
+#     user_id = serializers.CharField()
+#     added = serializers.BooleanField()

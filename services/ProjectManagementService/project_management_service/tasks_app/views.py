@@ -8,8 +8,8 @@ from rest_framework import status
 
 from .models import Task, Comment, TaskObserver
 from .serializers import (TaskSerializer, TaskCreateSerializer, TaskUpdateSerializer, CommentSerializer,
-                          CommentCreateSerializer, CommentUpdateSerializer, TaskObserversResponseSerializer,
-                          AddObserverSerializer, TaskObserverSerializer)
+                          CommentCreateSerializer, CommentUpdateSerializer,
+                          TaskObserverSerializer)
 
 
 @csrf_exempt
@@ -65,10 +65,10 @@ def comments_by_task(request, task_pk):
     if request.method == 'GET':
         comments = Comment.objects.filter(task=task)
         serializer = CommentSerializer(comments, many=True)
-        return JsonResponse(serializer.data)
+        return JsonResponse(serializer.data, safe=False)
     elif request.method == 'POST':
         data = JSONParser().parse(request)
-        serializer = CommentCreateSerializer(data=data)
+        serializer = CommentCreateSerializer(data=data, context={"user_id": uuid.uuid4(), "task": task})
         if serializer.is_valid():
             obj = serializer.save()
             read_serializer = CommentSerializer(obj)
@@ -113,33 +113,18 @@ def task_observers(request, task_pk):
     if request.method == 'GET':
         observers = task.observers
         serializer = TaskObserverSerializer(observers, many=True)
-        return JsonResponse(serializer.data)
+        return JsonResponse(serializer.data, safe=False)
 
     elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        serializer = AddObserverSerializer(data=data)
+        serializer = TaskObserverSerializer(data={}, context={"user_id": uuid.uuid4(), "task": task})
         if serializer.is_valid():
-            observers_data = serializer.validated_data['observers']
-            response_data = []
-            for o in observers_data:
-                member, created = TaskObserver.objects.get_or_create(
-                    task=o['task'],
-                    user_id=o['user_id']
-                )
-                response_data.append({
-                    "user_id": member.user_id,
-                    "added": created
-                })
-            response_serializer = TaskObserversResponseSerializer(response_data, many=True)
-            return JsonResponse(response_serializer.data, status=status.HTTP_201_CREATED, safe=False)
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
         else:
             return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
-        user_id = request.query_params.get('user_id')
-        if not user_id:
-            return JsonResponse({"error": "user_id query param is required"}, status=status.HTTP_400_BAD_REQUEST)
-
+        user_id = "PLACEHOLDER" # TO DO
         deleted, _ = TaskObserver.objects.filter(task=task, user_id=user_id).delete()
         if deleted:
             return JsonResponse({}, status=status.HTTP_204_NO_CONTENT)
