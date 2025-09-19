@@ -77,6 +77,11 @@ def comments_by_task(request, pk):
 
 @csrf_exempt
 @api_view(['GET', 'PATCH', 'DELETE'])
-def comment_by_task_and_id(request, task_pk, comment_pk):
-    pass
+def comment_by_task_and_id(request, comment_pk):
+    try:
+        comment = Comment.objects.get(id=comment_pk)
+    except Comment.DoesNotExist:
+        return JsonResponse({"errors": f'Comment {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
+
+
 
