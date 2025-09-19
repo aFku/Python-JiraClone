@@ -6,9 +6,10 @@ from django.http import JsonResponse
 from rest_framework.parsers import JSONParser
 from rest_framework import status
 
-from .models import Task, Comment
+from .models import Task, Comment, TaskObserver
 from .serializers import (TaskSerializer, TaskCreateSerializer, TaskUpdateSerializer, CommentSerializer,
-                          CommentCreateSerializer, CommentUpdateSerializer)
+                          CommentCreateSerializer, CommentUpdateSerializer, TaskObserversResponseSerializer,
+                          AddObserverSerializer, TaskObserverSerializer)
 
 
 @csrf_exempt
@@ -83,5 +84,64 @@ def comment_by_task_and_id(request, comment_pk):
     except Comment.DoesNotExist:
         return JsonResponse({"errors": f'Comment {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
 
+    if request.method == 'GET':
+        serializer = CommentSerializer(comment)
+        return JsonResponse(serializer.data)
+
+    elif request.method == 'PATCH':
+        data = JSONParser().parse(request)
+        serializer = CommentUpdateSerializer(instance=comment, data=data, partial=True)
+        if serializer.is_valid():
+            obj = serializer.save()
+            read_serializer = CommentSerializer(obj)
+            return JsonResponse(read_serializer.data)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        comment.delete()
+        return JsonResponse({}, status=status.HTTP_204_NO_CONTENT)
 
 
+@csrf_exempt
+@api_view(['GET', 'POST', 'DELETE'])
+def task_observers(request, pk):
+    try:
+        task = Task.objects.get(id=pk)
+    except Task.DoesNotExist:
+        return JsonResponse({"errors": f'Task {pk} does not exists'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        observers = task.observers
+        serializer = TaskObserverSerializer(observers, many=True)
+        return JsonResponse(serializer.data)
+
+    elif request.method == 'POST':
+        data = JSONParser().parse(request)
+        serializer = AddObserverSerializer(data=data)
+        if serializer.is_valid():
+            observers_data = serializer.validated_data['observers']
+            response_data = []
+            for o in observers_data:
+                member, created = TaskObserver.objects.get_or_create(
+                    task=o['task'],
+                    user_id=o['user_id']
+                )
+                response_data.append({
+                    "user_id": member.user_id,
+                    "added": created
+                })
+            response_serializer = TaskObserversResponseSerializer(response_data, many=True)
+            return JsonResponse(response_serializer.data, status=status.HTTP_201_CREATED, safe=False)
+        else:
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            return JsonResponse({"error": "user_id query param is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted, _ = TaskObserver.objects.filter(task=task, user_id=user_id).delete()
+        if deleted:
+            return JsonResponse({}, status=status.HTTP_204_NO_CONTENT)
+        else:
+            return JsonResponse({"error": "Observer not found"}, status=status.HTTP_404_NOT_FOUND)

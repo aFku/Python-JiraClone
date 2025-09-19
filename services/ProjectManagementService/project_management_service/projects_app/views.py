@@ -66,30 +66,34 @@ def project_members(request, pk):
         return JsonResponse(serializer.data, safe=False)
 
     elif request.method == 'POST':
-        serializer = AddMembersSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        members_data = serializer.validated_data['members']
+        data = JSONParser().parse(request)
+        serializer = AddMembersSerializer(data=data)
 
-        response_data = []
+        if serializer.is_valid():
+            members_data = serializer.validated_data['members']
 
-        for m in members_data:
-            member, created = ProjectMember.objects.get_or_create(
-                project=project,
-                user_id=m['user_id'],
-                defaults={'role': m['role']}
-            )
-            if not created:
-                member.role = m['role']
-                member.save()
+            response_data = []
 
-            response_data.append({
-                "user_id": member.user_id,
-                "role": member.role,
-                "added": created
-            })
+            for m in members_data:
+                member, created = ProjectMember.objects.get_or_create(
+                    project=project,
+                    user_id=m['user_id'],
+                    defaults={'role': m['role']}
+                )
+                if not created:
+                    member.role = m['role']
+                    member.save()
 
-        response_serializer = ProjectMemberAddResponseSerializer(response_data, many=True)
-        return JsonResponse(response_serializer.data, status=status.HTTP_201_CREATED, safe=False)
+                response_data.append({
+                    "user_id": member.user_id,
+                    "role": member.role,
+                    "added": created
+                })
+
+            response_serializer = ProjectMemberAddResponseSerializer(response_data, many=True)
+            return JsonResponse(response_serializer.data, status=status.HTTP_201_CREATED, safe=False)
+        else:
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
         user_id = request.query_params.get('user_id')

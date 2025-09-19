@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Task, Comment
+from .models import Task, Comment, TaskObserver
 from .services.task_management.task_status_workflow import Status, IncorrectTaskTransition
 from .services.task_management.task_relationship import IncorrectTaskRelationship
 from projects_app.models import Project
@@ -117,3 +117,17 @@ class CommentUpdateSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ['content']
 
+
+class TaskObserverSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskObserver
+        fields = ['task', 'user_id']
+
+
+class AddObserverSerializer(serializers.Serializer):
+    observers = TaskObserverSerializer(many=True)
+
+
+class TaskObserversResponseSerializer(serializers.Serializer):
+    user_id = serializers.CharField()
+    added = serializers.BooleanField()
