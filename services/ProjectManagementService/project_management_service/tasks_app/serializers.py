@@ -3,7 +3,9 @@ from rest_framework import serializers
 from .models import Task, Comment, TaskObserver
 from .services.task_management.task_status_workflow import Status, IncorrectTaskTransition
 from .services.task_management.task_relationship import IncorrectTaskRelationship
+from .services.task_management.task_sprint_manager import TaskSprintManagement
 from projects_app.models import Project
+from sprints_app.models import Sprint
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,16 +47,28 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         if not project:
             error["errors"]['project'] = ["Field 'project is required"]
 
+        sprints = validated_data.pop('sprint', [])
+
         if error["errors"]:
             raise serializers.ValidationError(error)
 
-        return Task.create_for_project(project=project, **validated_data)
+        task = Task.create_for_project(project=project, **validated_data)
+        for sprint in sprints:
+            TaskSprintManagement.add_task_to_sprint(task, sprint)
+        return task
+
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
+    add_sprint = serializers.PrimaryKeyRelatedField(
+        queryset=Sprint.objects.all(), required=False, write_only=True, many=True
+    )
+    remove_sprint = serializers.PrimaryKeyRelatedField(
+        queryset=Sprint.objects.all(), required=False, write_only=True, many=True
+    )
 
     class Meta:
         model = Task
-        fields = ['summary', 'description', 'assignee', 'due_date', 'parent', 'sprint',
+        fields = ['summary', 'description', 'assignee', 'due_date', 'parent', 'add_sprint', 'remove_sprint',
                   'estimate', 'priority', 'status']
 
     def update(self, instance, validated_data):
@@ -80,6 +94,21 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
                 error["errors"]['parent'] = [f'Project {validated_data["parent"]} does not exist']
             except IncorrectTaskRelationship as e:
                 error["errors"]['parent'] = [str(e)]
+
+        add_sprints = validated_data.pop('add_sprint', [])
+        remove_sprints = validated_data.pop('remove_sprint', [])
+
+        for sprint in add_sprints:
+            try:
+                TaskSprintManagement.add_task_to_sprint(instance, sprint)
+            except serializers.ValidationError as e:
+                error["errors"].setdefault('add_sprint', []).append(str(e.detail[0]))
+
+        for sprint in remove_sprints:
+            try:
+                TaskSprintManagement.remove_task_from_sprint(instance, sprint)
+            except serializers.ValidationError as e:
+                error["errors"].setdefault('remove_sprint', []).append(str(e.detail[0]))
 
         if error["errors"]:
             raise serializers.ValidationError(error)
