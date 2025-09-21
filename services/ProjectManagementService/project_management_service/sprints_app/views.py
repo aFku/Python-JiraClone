@@ -6,6 +6,7 @@ from rest_framework import status
 
 from .models import Sprint
 from .serializers import SprintsSerializer, SprintCreateSerializer, SprintUpdateSerializer
+from .filters import SprintFilter
 
 
 @csrf_exempt
@@ -13,6 +14,9 @@ from .serializers import SprintsSerializer, SprintCreateSerializer, SprintUpdate
 def sprints_view(request):
     if request.method == 'GET':
         sprints = Sprint.objects.all()
+        filterset = SprintFilter(request.GET, queryset=sprints)
+        if filterset.is_valid():
+            sprints = filterset.qs
         serializer = SprintsSerializer(sprints, many=True)
         return JsonResponse(serializer.data, safe=False)
 

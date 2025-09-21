@@ -10,13 +10,16 @@ from .models import Task, Comment, TaskObserver
 from .serializers import (TaskSerializer, TaskCreateSerializer, TaskUpdateSerializer, CommentSerializer,
                           CommentCreateSerializer, CommentUpdateSerializer,
                           TaskObserverSerializer)
-
+from .filters import TaskFilter, CommentFilter
 
 @csrf_exempt
 @api_view(['GET', 'POST'])
 def tasks_view(request):
     if request.method == 'GET':
         tasks = Task.objects.all()
+        filterset = TaskFilter(request.GET, queryset=tasks)
+        if filterset.is_valid():
+            tasks = filterset.qs
         serializer = TaskSerializer(tasks, many=True)
         return JsonResponse(serializer.data, safe=False)
     elif request.method == 'POST':
@@ -64,6 +67,9 @@ def comments_by_task(request, task_pk):
 
     if request.method == 'GET':
         comments = Comment.objects.filter(task=task)
+        filterset = CommentFilter(request.GET, queryset=comments)
+        if filterset.is_valid():
+            comments = filterset.qs
         serializer = CommentSerializer(comments, many=True)
         return JsonResponse(serializer.data, safe=False)
     elif request.method == 'POST':
