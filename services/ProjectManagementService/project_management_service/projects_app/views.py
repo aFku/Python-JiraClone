@@ -33,7 +33,6 @@ def project_by_id(request, project_pk):
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
     if request.method == 'GET':
         serializer = ProjectSerializer(project)
         return JsonResponse(serializer.data, safe=False)

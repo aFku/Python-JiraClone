@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Sprint
+from .services.sprint_status_management import SprintStatusManager, InvalidSprintStatusTransition
 
 
 class SprintsSerializer(serializers.ModelSerializer):
@@ -35,8 +36,8 @@ class SprintUpdateSerializer(serializers.ModelSerializer):
         to_status = validated_data.pop('status', None)
         if to_status:
             try:
-                instance.change_status(to_status)
-            except Sprint.InvalidSprintStatusTransition as e:
+                SprintStatusManager.change_status(to_status, instance)
+            except InvalidSprintStatusTransition as e:
                 raise serializers.ValidationError({
                     "errors": {
                         "status": str(e)
