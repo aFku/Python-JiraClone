@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 from sprints_app.models import Sprint
+from .task_relationship import TaskType
 
 class TaskSprintManagement:
 
@@ -11,9 +12,6 @@ class TaskSprintManagement:
 
         if sprint.status == Sprint.SprintStatus.CLOSED:
             raise serializers.ValidationError("Cannot remove task from closed sprint")
-
-        if task.parent and task.parent.sprint.filter(id=sprint.id).exist():
-            raise serializers.ValidationError("You cannot remove sprint from child without removing it from parent")
 
         with transaction.atomic():
             task.sprint.remove(sprint)
