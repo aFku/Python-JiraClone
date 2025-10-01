@@ -1,8 +1,8 @@
 from django.urls import path, include
 
-from .views import sprints_view, sprint_by_id_view
+from .views import SprintsView, SprintByIdView
 
 urlpatterns = [
-    path('', sprints_view),
-    path('<int:sprint_pk>/', sprint_by_id_view)
+    path('', SprintsView.as_view()),
+    path('<int:sprint_pk>/', SprintByIdView.as_view())
 ]

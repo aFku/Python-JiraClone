@@ -43,5 +43,5 @@ class SprintUpdateSerializer(serializers.ModelSerializer):
                         "status": str(e)
                     }
                 })
-        validated_data["status"] = to_status
+        validated_data["status"] = to_status if to_status else instance.status
         return super().update(instance, validated_data)
