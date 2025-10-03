@@ -4,25 +4,39 @@ from rest_framework.parsers import JSONParser
 from rest_framework import status
 from rest_framework.decorators import api_view
 
+from rest_framework import generics
+
 from .serializers import ProjectSerializer, ProjectMemberSerializer, ProjectMemberRemoveSerializer
 from .models import Project
 
 
-@csrf_exempt
-@api_view(['GET', 'POST'])
-def projects(request):
-    if request.method == 'GET':
-        projects = Project.objects.all()
-        serializer = ProjectSerializer(projects, many=True)
-        return JsonResponse(serializer.data, safe=False)
+class ProjectsView(generics.ListCreateAPIView):
+    """
+    View for managing Projects (Create/Fetch All)
+    List -
+    Create -
+    """
 
-    elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        serializer = ProjectSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+
+
+
+# @csrf_exempt
+# @api_view(['GET', 'POST'])
+# def projects(request):
+#     if request.method == 'GET':
+#         projects = Project.objects.all()
+#         serializer = ProjectSerializer(projects, many=True)
+#         return JsonResponse(serializer.data, safe=False)
+#
+#     elif request.method == 'POST':
+#         data = JSONParser().parse(request)
+#         serializer = ProjectSerializer(data=data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+#         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @csrf_exempt

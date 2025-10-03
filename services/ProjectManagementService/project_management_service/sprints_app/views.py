@@ -10,7 +10,7 @@ from .filters import SprintFilter
 
 class SprintsView(generics.ListCreateAPIView):
     """
-    View for managing views (Create/Fetch All)
+    View for managing Sprints (Create/Fetch All)
     List - handled by default
     Create - Custom implementation (Changing serializer for response)
     """
