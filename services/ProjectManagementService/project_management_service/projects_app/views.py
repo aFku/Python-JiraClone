@@ -1,10 +1,8 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
 from rest_framework import status
-from rest_framework.decorators import api_view
-
 from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 
 from .serializers import ProjectSerializer, ProjectMemberSerializer, ProjectMemberRemoveSerializer
 from .models import Project
@@ -13,85 +11,56 @@ from .models import Project
 class ProjectsView(generics.ListCreateAPIView):
     """
     View for managing Projects (Create/Fetch All)
-    List -
-    Create -
+    List - Default fetch
+    Create - Default create (id field read_only in serializer)
     """
 
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
 
 
+class ProjectByIdView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Default Create, Update, Delete for projects
+    """
 
-# @csrf_exempt
-# @api_view(['GET', 'POST'])
-# def projects(request):
-#     if request.method == 'GET':
-#         projects = Project.objects.all()
-#         serializer = ProjectSerializer(projects, many=True)
-#         return JsonResponse(serializer.data, safe=False)
-#
-#     elif request.method == 'POST':
-#         data = JSONParser().parse(request)
-#         serializer = ProjectSerializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-#         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer_class = ProjectSerializer
 
 
-@csrf_exempt
-@api_view(['GET', 'PATCH', 'DELETE'])
-def project_by_id(request, project_pk):
-    try:
-        project = Project.objects.get(id=project_pk)
-    except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+class ProjectMembersView(APIView):
+    """
+    Custom APIView for managing project members. Project ID is required for all methods
+    GET - Get list of members in specific projects
+    POST - Add one or many members to project
+    DELETE - Remove members from project
+    """
 
-    if request.method == 'GET':
-        serializer = ProjectSerializer(project)
-        return JsonResponse(serializer.data, safe=False)
-
-    elif request.method == 'PATCH':
-        data = JSONParser().parse(request)
-        data.pop('id', None)
-        serializer = ProjectSerializer(project, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        project.delete()
-        return JsonResponse({}, status=status.HTTP_204_NO_CONTENT)
-
-
-@csrf_exempt
-@api_view(['GET', 'POST', 'DELETE'])
-def project_members(request, project_pk):
-    try:
-        project = Project.objects.get(id=project_pk)
-    except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
         role_param = request.query_params.get('role', None)
-        serializer = ProjectMemberSerializer(project.get_members(role_param), many=True)
-        return JsonResponse(serializer.data, safe=False)
+        members = project.get_members(role_param)
+        serializer = ProjectMemberSerializer(members, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        serializer = ProjectMemberSerializer(data=data, many=True, context={"project": project})
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        serializer = ProjectMemberSerializer(
+            data=request.data,
+            many=True,
+            context={"project": project}
+        )
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
-        else:
-            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == 'DELETE':
-        data = JSONParser().parse(request)
-        serializer = ProjectMemberRemoveSerializer(data=data, context={"project": project})
+    def delete(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        serializer = ProjectMemberRemoveSerializer(
+            data=request.data,
+            context={"project": project}
+        )
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse({}, status=status.HTTP_204_NO_CONTENT)
-        else:
-            return JsonResponse({serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
