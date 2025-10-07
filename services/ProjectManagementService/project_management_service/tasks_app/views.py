@@ -1,18 +1,19 @@
 import uuid
 
-from rest_framework.status import HTTP_200_OK
-from rest_framework.views import csrf_exempt, APIView
 from rest_framework import status
 from rest_framework import generics
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
+from rest_framework.status import HTTP_200_OK
 
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .filters import TaskFilter, CommentFilter
 from .models import Task, Comment, TaskObserver
 from .serializers import (TaskSerializer, TaskCreateSerializer, TaskUpdateSerializer, CommentSerializer,
                           CommentCreateSerializer, CommentUpdateSerializer,
                           TaskObserverSerializer)
-from .filters import TaskFilter, CommentFilter
 
 
 class TasksView(generics.ListCreateAPIView):

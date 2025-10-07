@@ -7,7 +7,13 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ['id', 'project_name']
-        read_only_fields = ['id']
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        if self.instance is not None:
+            fields['id'].read_only = True
+        return fields
 
 
 class ProjectMemberSerializer(serializers.ModelSerializer):
@@ -26,7 +32,6 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
             user_id=validated_data.get('user_id'),
             defaults={"role": validated_data["role"]} # Use only for creating, not for searching
         )
-        print(member, created)
         if not created and member.role != validated_data.get('role'):
             member.role = validated_data.get('role')
             member.save(update_fields=['role'])

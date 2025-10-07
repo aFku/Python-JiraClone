@@ -1,11 +1,16 @@
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+
 from rest_framework import status
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 
-from .serializers import ProjectSerializer, ProjectMemberSerializer, ProjectMemberRemoveSerializer
 from .models import Project
+from .models import ProjectMember
+from .serializers import ProjectSerializer, ProjectMemberSerializer, ProjectMemberRemoveSerializer
+
 
 
 class ProjectsView(generics.ListCreateAPIView):
@@ -17,6 +22,30 @@ class ProjectsView(generics.ListCreateAPIView):
 
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+
+    def get_user_id(self):
+        return self.request.headers.get('user_id') # TO DO: Change when user id correctly handled
+
+    def perform_create(self, serializer):
+        user_id = self.get_user_id()
+        if not user_id:
+            raise ValidationError({"user_id": "Header 'user_id' cannot be empty."})
+
+        with transaction.atomic():
+            project = serializer.save()
+            member_serializer = ProjectMemberSerializer(
+                data={
+                    "user_id": user_id,
+                    "role": ProjectMember.Role.ADMIN,
+                },
+                context={
+                    "project": project
+                }
+            )
+            member_serializer.is_valid(raise_exception=True)
+            member_serializer.save()
+        return project
+
 
 
 class ProjectByIdView(generics.RetrieveUpdateDestroyAPIView):
