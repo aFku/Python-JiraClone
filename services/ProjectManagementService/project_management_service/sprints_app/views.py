@@ -3,11 +3,13 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import permissions
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Exists, OuterRef
 
 from .models import Sprint
 from .serializers import SprintsSerializer, SprintCreateSerializer, SprintUpdateSerializer
 from .filters import SprintFilter
 from ..projects_app.permissions import IsViewerOrDeny, IsDeveloperOrDeny, IsAdminOrDeny
+from ..projects_app.models import ProjectMember
 
 
 class SprintsView(generics.ListCreateAPIView):
@@ -21,9 +23,27 @@ class SprintsView(generics.ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = SprintFilter
     methods_permissions_classes = {
-        'GET': [IsViewerOrDeny],
         'POST': [IsDeveloperOrDeny]
     }
+
+    def get_queryset(self):
+        """
+        Optimized solution to filter out sprints in projects that user should not see.
+        Creating additional column with annotate that will have True/False regarding if ProjectMember has line
+        with sprints project and user's ID
+        """
+        user_id = self.get_user_id()
+        return Sprint.objects.annotate(
+            is_member=Exists(
+                ProjectMember.objects.filter(
+                    project=OuterRef('project_id'),
+                    user=user_id
+                )
+            )
+        ).filter(is_member=True)
+
+    def get_user_id(self):
+        return self.request.headers.get('user_id') # TO DO: Change when user id correctly handled
 
     def get_permissions(self):
         permission_classes = [permissions.IsAuthenticated]
