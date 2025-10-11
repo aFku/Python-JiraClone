@@ -2,10 +2,13 @@ import uuid
 
 from rest_framework import status
 from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
+from rest_framework import permissions
 
+from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -15,17 +18,47 @@ from .serializers import (TaskSerializer, TaskCreateSerializer, TaskUpdateSerial
                           CommentCreateSerializer, CommentUpdateSerializer,
                           TaskObserverSerializer)
 
+from permissions.project_permissions import IsDeveloperOrDeny, IsViewerOrDeny, IsAdminOrDeny
+from projects_app.models import ProjectMember
+
 
 class TasksView(generics.ListCreateAPIView):
     """
     Class for List / Create Tasks
-    GET - Fetch list of accessible tasks
-    POST - Create Task
+    GET - Fetch list of accessible tasks (for viewers)
+    POST - Create Task (for devs and admins)
     """
 
     queryset = Task.objects.all()
     filter_backends = [DjangoFilterBackend]
     filterset_class = TaskFilter
+    methods_permissions_classes = {
+        'POST': [IsDeveloperOrDeny]
+    }
+
+    def get_queryset(self):
+        """
+        Optimized solution to filter out tasks in projects that user should not see.
+        Creating additional column with annotate that will have True/False regarding if ProjectMember has line
+        with task project and user's ID
+        """
+        user_id = self.get_user_id()
+        return Task.objects.annotate(
+            is_member=Exists(
+                ProjectMember.objects.filter(
+                    project=OuterRef('project_id'),
+                    user=user_id
+                )
+            )
+        ).filter(is_member=True)
+
+    def get_user_id(self):
+        return self.request.headers.get('user_id') # TO DO: Change when user id correctly handled
+
+    def get_permissions(self):
+        permission_classes = [permissions.IsAuthenticated]
+        permission_classes += self.methods_permission_classes.get(self.request.method, [])
+        return [p() for p in permission_classes]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -50,9 +83,9 @@ class TasksView(generics.ListCreateAPIView):
 class TaskByIdView(generics.RetrieveUpdateDestroyAPIView):
     """
     View for managing single task
-    GET - Get task details
-    PATCH - Update partially task
-    DELETE - Remove task
+    GET - Get task details (for viewers)
+    PATCH - Update partially task (for devs and admins)
+    DELETE - Remove task (for admins
     """
 
 
@@ -60,6 +93,17 @@ class TaskByIdView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
     lookup_url_kwarg = 'task_pk'
     http_method_names = ['get', 'patch', 'delete']
+    methods_permissions_classes = {
+        'GET': [IsViewerOrDeny],
+        'PATCH': [IsDeveloperOrDeny],
+        'DELETE': [IsAdminOrDeny]
+    }
+
+    def get_permissions(self):
+        permission_classes = [permissions.IsAuthenticated]
+        permission_classes += self.methods_permission_classes.get(self.request.method, [])
+        return [p() for p in permission_classes]
+
 
     def get_serializer_class(self):
         if self.request.method in ['GET', 'DELETE']:
@@ -89,6 +133,33 @@ class CommentListCreateView(generics.ListCreateAPIView):
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = CommentFilter
+    methods_permissions_classes = {
+        'POST': [IsDeveloperOrDeny]
+    }
+
+    def get_queryset(self):
+        """
+        Optimized solution to filter out comments in projects that user should not see.
+        Creating additional column with annotate that will have True/False regarding if ProjectMember has line
+        with comment project and user's ID
+        """
+        user_id = self.get_user_id()
+        return Comment.objects.annotate(
+            is_member=Exists(
+                ProjectMember.objects.filter(
+                    project=OuterRef('project_id'),
+                    user=user_id
+                )
+            )
+        ).filter(is_member=True)
+
+    def get_user_id(self):
+        return self.request.headers.get('user_id') # TO DO: Change when user id correctly handled
+
+    def get_permissions(self):
+        permission_classes = [permissions.IsAuthenticated]
+        permission_classes += self.methods_permission_classes.get(self.request.method, [])
+        return [p() for p in permission_classes]
 
     def get_queryset(self):
         task_pk = self.kwargs["task_pk"]
@@ -124,6 +195,17 @@ class CommentByIdView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
     lookup_url_kwarg = 'comment_pk'
     http_method_names = ['get', 'patch', 'delete']
+    methods_permissions_classes = {
+        'GET': [IsViewerOrDeny],
+        'PATCH': [IsDeveloperOrDeny],
+        'DELETE': [IsAdminOrDeny]
+    }
+
+    def get_permissions(self):
+        permission_classes = [permissions.IsAuthenticated]
+        permission_classes += self.methods_permission_classes.get(self.request.method, [])
+        return [p() for p in permission_classes]
+
 
     def get_serializer_class(self):
         if self.request.method in ['GET', 'DELETE']:
@@ -151,22 +233,29 @@ class TaskObserversView(APIView):
     DELETE - Remove observer from task (Current user only)
     """
 
-    def get_task(self, task_pk):
-        return get_object_or_404(Task, id=task_pk)
+    permission_classes = [IsAuthenticated, IsViewerOrDeny]
+
+    def get_user_id(self, request):
+        return request.headers.get('user_id') # TO DO: Change when user id correctly handled
+
+    def get_task(self, request, task_pk):
+        obj = get_object_or_404(Task, id=task_pk)
+        self.check_object_permissions(request, obj)
+        return obj
 
     def get(self, request, task_pk):
-        task = self.get_task(task_pk)
+        task = self.get_task(request, task_pk)
         task_observers = task.observers.all()
         serializer = TaskObserverSerializer(task_observers, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, task_pk):
-        task = self.get_task(task_pk)
+        task = self.get_task(request, task_pk)
         serializer = TaskObserverSerializer(
             data={},
             context={
                 "task": task,
-                "user_id": uuid.uuid4() #  TO DO: replace with real user id later
+                "user_id": self.get_user_id(request) #  TO DO: replace with real user id later
             }
         )
         if serializer.is_valid():
@@ -175,8 +264,8 @@ class TaskObserversView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, task_pk):
-        task = self.get_task(task_pk)
-        user_id = request.query_params.get('user_id') #  TO DO: replace with current user id later
+        task = self.get_task(request, task_pk)
+        user_id = self.get_user_id(request) #  TO DO: replace with real user id later
         if not user_id:
             return Response({"error": "Missing user_id parameter"}, status=status.HTTP_400_BAD_REQUEST) # Remove after TO DO
         deleted, _ = TaskObserver.objects.filter(task=task, user_id=user_id).delete()

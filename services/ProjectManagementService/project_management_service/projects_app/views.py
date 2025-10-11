@@ -11,7 +11,7 @@ from rest_framework.exceptions import ValidationError
 
 from .models import Project
 from .models import ProjectMember
-from .permissions import IsViewerOrDeny, IsDeveloperOrDeny, IsAdminOrDeny
+from permissions.project_permissions import IsViewerOrDeny, IsAdminOrDeny
 from .serializers import ProjectSerializer, ProjectMemberSerializer, ProjectMemberRemoveSerializer
 
 

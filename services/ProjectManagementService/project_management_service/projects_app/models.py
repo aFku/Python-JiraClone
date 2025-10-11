@@ -1,7 +1,9 @@
 from django.db import models
 from django.core.validators import MinLengthValidator
 
-class Project(models.Model):
+from utils.models_helpers import ProjectRelated
+
+class Project(models.Model, ProjectRelated):
     id = models.CharField(max_length=3, primary_key=True, validators=[MinLengthValidator(3)])
     project_name = models.CharField(max_length=25, blank=False, validators=[MinLengthValidator(3)])
     last_task_index = models.PositiveIntegerField(default=0)
@@ -29,7 +31,10 @@ class Project(models.Model):
     def remove_member(self, user_id: str):
         ProjectMember.objects.filter(project=self, user_id=user_id).delete()
 
-class ProjectMember(models.Model):
+    def get_project(self):
+        return self
+
+class ProjectMember(models.Model, ProjectRelated):
     id = models.AutoField(primary_key=True)
     user_id = models.CharField() # supplied by request, userID not stored in this project
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members')
@@ -45,3 +50,6 @@ class ProjectMember(models.Model):
 
     def get_role(self) -> Role:
         return self.Role(self.role)
+
+    def get_project(self):
+        return self.project

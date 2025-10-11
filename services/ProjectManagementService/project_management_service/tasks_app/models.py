@@ -3,8 +3,9 @@ from django.utils import timezone
 
 from .services.task_management.task_status_workflow import TaskStatusWorkFlow, IncorrectTaskTransition, Status
 from .services.task_management.task_relationship import TaskType, IncorrectTaskRelationship, TaskRelationship
+from utils.models_helpers import ProjectRelated
 
-class Task(models.Model):
+class Task(models.Model, ProjectRelated):
     id = models.CharField(max_length=64, primary_key=True)
     number = models.IntegerField(null=False)
 
@@ -98,6 +99,9 @@ class Task(models.Model):
 
         self.status = to_status
 
+    def get_project(self):
+        return self.project
+
     def save(
         self,
         *args,
@@ -118,19 +122,25 @@ class Task(models.Model):
         return f"{self.id} - {self.summary}"
 
 
-class TaskObserver(models.Model):
+class TaskObserver(models.Model, ProjectRelated):
     id = models.AutoField(primary_key=True)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='observers')
     user_id = models.CharField(max_length=64)
 
+    def get_project(self):
+        return self.task.get_project()
 
-class Comment(models.Model):
+
+class Comment(models.Model, ProjectRelated):
     id = models.AutoField(primary_key=True)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments', null=False)
     author = models.CharField(max_length=64)
     content = models.CharField(max_length=255)
     creation_date = models.DateTimeField(auto_now_add=True)
     last_edit_time = models.DateTimeField(auto_now=True)
+
+    def get_project(self):
+        return self.task.get_project()
 
     def save(
         self,

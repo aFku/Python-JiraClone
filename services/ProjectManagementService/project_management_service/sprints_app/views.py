@@ -8,8 +8,8 @@ from django.db.models import Exists, OuterRef
 from .models import Sprint
 from .serializers import SprintsSerializer, SprintCreateSerializer, SprintUpdateSerializer
 from .filters import SprintFilter
-from ..projects_app.permissions import IsViewerOrDeny, IsDeveloperOrDeny, IsAdminOrDeny
-from ..projects_app.models import ProjectMember
+from permissions.project_permissions import IsViewerOrDeny, IsDeveloperOrDeny, IsAdminOrDeny
+from projects_app.models import ProjectMember
 
 
 class SprintsView(generics.ListCreateAPIView):

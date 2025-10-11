@@ -1,8 +1,9 @@
 from django.db import models
 from django.core.validators import MinLengthValidator
 from .services.sprint_status_management import SprintStatus
+from utils.models_helpers import ProjectRelated
 
-class Sprint(models.Model):
+class Sprint(models.Model, ProjectRelated):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=32, validators=[MinLengthValidator(3)], blank=False)
     start_date = models.DateTimeField(null=True)
@@ -16,4 +17,6 @@ class Sprint(models.Model):
     def get_status(self) -> SprintStatus:
         return SprintStatus(self.status)
 
+    def get_project(self):
+        return self.project
     # tasks - Task model. Many-to-Many.
